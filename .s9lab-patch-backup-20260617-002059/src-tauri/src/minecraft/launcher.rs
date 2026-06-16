@@ -9,7 +9,7 @@ use chrono::Utc;
 use serde::Serialize;
 use std::{collections::{HashMap, HashSet}, path::PathBuf, process::Stdio, time::Duration};
 use tauri::{AppHandle, Emitter, Manager};
-use tokio::{io::{AsyncBufReadExt, BufReader}, process::{Child, Command}, time::sleep};
+use tokio::{io::{AsyncBufReadExt, BufReader}, process::Command, time::sleep};
 
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -28,20 +28,12 @@ pub struct LaunchStatus {
     pub account_name: Option<String>,
     pub started_at_unix: Option<i64>,
     pub message: Option<String>,
-    pub running_instances: usize,
 }
 
 impl LaunchStatus {
     pub fn idle() -> Self {
-        Self { state: LaunchState::Idle, process_id: None, account_name: None, started_at_unix: None, message: None, running_instances: 0 }
+        Self { state: LaunchState::Idle, process_id: None, account_name: None, started_at_unix: None, message: None }
     }
-}
-
-
-pub struct RunningInstance {
-    pub child: Child,
-    pub account_name: String,
-    pub started_at_unix: i64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -56,8 +48,8 @@ pub async fn get_status(state: &AppState) -> LaunchStatus {
 }
 
 pub async fn launch_client(app: AppHandle, state: AppState, account_id: &str) -> AppResult<LaunchStatus> {
-    cleanup_finished_children(&state).await?;
-    let running_instances = state.children.lock().await.len();
+    cleanup_finished_child(&state).await?;
+    if state.child.lock().await.is_some() { return Err(AppError::AlreadyRunning); }
 
     update_status(&app, &state, LaunchStatus {
         state: LaunchState::Starting,
@@ -65,7 +57,6 @@ pub async fn launch_client(app: AppHandle, state: AppState, account_id: &str) ->
         account_name: None,
         started_at_unix: None,
         message: Some("Account und Installation werden geprÃ¼ft".into()),
-        running_instances,
     }).await;
 
     let result = prepare_and_spawn(&app, &state, account_id).await;
@@ -78,7 +69,6 @@ pub async fn launch_client(app: AppHandle, state: AppState, account_id: &str) ->
             account_name: None,
             started_at_unix: None,
             message: Some(message),
-            running_instances: state.children.lock().await.len(),
         }).await;
     }
     result
@@ -122,21 +112,14 @@ async fn prepare_and_spawn(app: &AppHandle, state: &AppState, account_id: &str) 
     let process_id = child.id();
     let stdout = child.stdout.take();
     let stderr = child.stderr.take();
-    let started_at_unix = Utc::now().timestamp();
-    state.children.lock().await.push(RunningInstance {
-        child,
-        account_name: account.username.clone(),
-        started_at_unix,
-    });
-    let running_instances = state.children.lock().await.len();
+    *state.child.lock().await = Some(child);
 
     let status = LaunchStatus {
         state: LaunchState::Running,
         process_id,
         account_name: Some(account.username.clone()),
-        started_at_unix: Some(started_at_unix),
-        message: Some(format!("S9Lab Client läuft · {running_instances} Instanz(en)")),
-        running_instances,
+        started_at_unix: Some(Utc::now().timestamp()),
+        message: Some("S9Lab Client lÃ¤uft".into()),
     };
     update_status(app, state, status.clone()).await;
 
@@ -163,21 +146,17 @@ pub async fn stop_client(app: &AppHandle, state: &AppState) -> AppResult<LaunchS
         process_id: current.process_id,
         account_name: current.account_name,
         started_at_unix: current.started_at_unix,
-        message: Some("Minecraft-Instanzen werden beendet".into()),
-        running_instances: current.running_instances,
+        message: Some("Minecraft wird beendet".into()),
     }).await;
-
-    let mut guard = state.children.lock().await;
-    for instance in guard.iter_mut() {
-        instance.child.kill().await?;
-        let _ = instance.child.wait().await;
+    let mut guard = state.child.lock().await;
+    if let Some(child) = guard.as_mut() {
+        child.kill().await?;
+        let _ = child.wait().await;
     }
-    guard.clear();
-    drop(guard);
-
+    *guard = None;
     let status = LaunchStatus::idle();
     update_status(app, state, status.clone()).await;
-    logging::append("Alle Minecraft-Instanzen wurden über den Launcher beendet")?;
+    logging::append("Minecraft wurde Ã¼ber den Launcher beendet")?;
     Ok(status)
 }
 
@@ -292,64 +271,40 @@ where
 
 fn spawn_process_monitor(app: AppHandle, state: AppState, process_id: Option<u32>) {
     tauri::async_runtime::spawn(async move {
-        let Some(process_id) = process_id else { return; };
         loop {
             sleep(Duration::from_secs(1)).await;
             let exit = {
-                let mut guard = state.children.lock().await;
-                let Some(index) = guard.iter().position(|instance| instance.child.id() == Some(process_id)) else { return; };
-                match guard[index].child.try_wait() {
-                    Ok(Some(status)) => { guard.remove(index); Some(Ok(status)) }
+                let mut guard = state.child.lock().await;
+                let Some(child) = guard.as_mut() else { return; };
+                if child.id() != process_id { return; }
+                match child.try_wait() {
+                    Ok(Some(status)) => { *guard = None; Some(Ok(status)) }
                     Ok(None) => None,
-                    Err(error) => { guard.remove(index); Some(Err(error)) }
+                    Err(error) => { *guard = None; Some(Err(error)) }
                 }
             };
             let Some(exit) = exit else { continue; };
-            let message = match exit {
-                Ok(status) if status.success() => format!("Minecraft-Instanz wurde beendet ({status})"),
-                Ok(status) => format!("Minecraft-Instanz wurde mit {status} beendet"),
-                Err(error) => format!("Minecraft-Prozessfehler: {error}"),
+            let (state_value, message) = match exit {
+                Ok(status) if status.success() => (LaunchState::Idle, format!("Minecraft wurde beendet ({status})")),
+                Ok(status) => (LaunchState::Failed, format!("Minecraft wurde mit {status} beendet")),
+                Err(error) => (LaunchState::Failed, format!("Minecraft-Prozessfehler: {error}")),
             };
-
-            let status = {
-                let guard = state.children.lock().await;
-                if let Some(instance) = guard.last() {
-                    LaunchStatus {
-                        state: LaunchState::Running,
-                        process_id: instance.child.id(),
-                        account_name: Some(instance.account_name.clone()),
-                        started_at_unix: Some(instance.started_at_unix),
-                        message: Some(format!("S9Lab Client läuft · {} Instanz(en)", guard.len())),
-                        running_instances: guard.len(),
-                    }
-                } else {
-                    let mut idle = LaunchStatus::idle();
-                    idle.message = Some(message.clone());
-                    idle
-                }
-            };
+            let status = LaunchStatus { state: state_value, process_id: None, account_name: None, started_at_unix: None, message: Some(message.clone()) };
             update_status(&app, &state, status).await;
             emit_log(&app, "system", &message);
             let _ = logging::append(&message);
-            if state.children.lock().await.is_empty() {
-                if let Some(window) = app.get_webview_window("main") {
-                    let _ = window.show();
-                }
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
             }
             return;
         }
     });
 }
 
-async fn cleanup_finished_children(state: &AppState) -> AppResult<()> {
-    let mut guard = state.children.lock().await;
-    let mut index = 0;
-    while index < guard.len() {
-        if guard[index].child.try_wait()?.is_some() {
-            guard.remove(index);
-        } else {
-            index += 1;
-        }
+async fn cleanup_finished_child(state: &AppState) -> AppResult<()> {
+    let mut guard = state.child.lock().await;
+    if let Some(child) = guard.as_mut() {
+        if child.try_wait()?.is_some() { *guard = None; }
     }
     Ok(())
 }

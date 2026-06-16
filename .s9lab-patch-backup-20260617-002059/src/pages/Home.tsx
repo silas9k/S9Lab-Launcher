@@ -1,4 +1,4 @@
-import { Download, Play, Plus, Square } from "lucide-react";
+import { Download, Play, Square } from "lucide-react";
 import { activeAccount, useLauncherStore } from "../store/launcherStore";
 
 export function HomePage() {
@@ -16,9 +16,8 @@ export function HomePage() {
           <h1>{account?.username ?? "S9LAB"}</h1>
           <button className="launch-main" onClick={() => running ? void stop() : void launch()} disabled={busy || (!canStart && !running)}>
             {running ? <Square size={19} fill="currentColor" /> : snapshot.client.installed ? <Play size={20} fill="currentColor" /> : <Download size={20} />}
-            <span><strong>{running ? "ALLE STOPPEN" : "START"}</strong><small>{running ? `${snapshot.launch.running_instances} INSTANZ(EN) AKTIV` : `S9LAB CLIENT · ${snapshot.client.game_version}`}</small></span>
+            <span><strong>{running ? "STOP" : "START"}</strong><small>S9LAB CLIENT · {snapshot.client.game_version}</small></span>
           </button>
-          {running && <button className="stage-hint" onClick={() => void launch()} disabled={busy || !canStart}><Plus size={15}/> Weitere Instanz starten</button>}
           {!account && <button className="stage-hint" onClick={() => setPage("accounts")}>Microsoft-Account hinzufügen</button>}
           {!snapshot.client.java_found && <button className="stage-hint stage-hint--java" onClick={() => setPage("settings")}>Java 21 konfigurieren</button>}
           {installProgress && busy && <div className="stage-progress"><span>{installProgress.stage}</span><b>{Math.round(installProgress.percent)}%</b><i><em style={{ width: `${installProgress.percent}%` }} /></i><small>{installProgress.detail}</small></div>}

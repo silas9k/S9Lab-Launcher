@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
@@ -14,7 +14,6 @@ import {
   UserRound,
   X,
 } from "lucide-react";
-import { createBackendSessionInfo } from "../lib/backend";
 import { useLauncherStore } from "../store/launcherStore";
 import { LAUNCHER_UPDATER_ENABLED } from "../updater-config";
 import "../enhancements.css";
@@ -38,7 +37,6 @@ export function LauncherEnhancements() {
   const [updateProgress, setUpdateProgress] = useState(0);
   const [updateBusy, setUpdateBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const rewardBusy = useRef(false);
 
   const activeAccountId = snapshot?.active_account_id ?? null;
   const activeAccount = useMemo(
@@ -81,38 +79,21 @@ export function LauncherEnhancements() {
     if (!logo) return;
 
     const claim = async () => {
-      if (rewardBusy.current) return;
-      if (!activeAccount || !snapshot) {
+      if (!activeAccountId) {
         setMessage("Wähle zuerst einen Account aus.");
         return;
       }
-
-      rewardBusy.current = true;
       try {
-        const session = await createBackendSessionInfo(activeAccount, snapshot.settings);
-        const result = await invoke<RewardResult>("claim_logo_reward", {
-          accountId: activeAccount.id,
-          sessionToken: session.token,
-        });
-        window.dispatchEvent(new CustomEvent("s9lab-backend-profile-updated", {
-          detail: { accountId: activeAccount.id, coins: result.coins },
-        }));
-        setMessage(result.claimed
-          ? `${result.message} Kontostand: ${result.coins.toLocaleString("de-DE")} Coins.`
-          : result.message || "Dieser Account hat das Secret bereits eingelöst.");
+        const result = await invoke<RewardResult>("claim_logo_reward", { accountId: activeAccountId });
+        setMessage(result.claimed ? `Secret gefunden: +1000 Coins · ${result.coins} Coins` : result.message);
       } catch (error) {
-        const text = error instanceof Error ? error.message : String(error);
-        setMessage(text.toLowerCase().includes("session")
-          ? "Die Backend-Session ist ungültig oder abgelaufen. Bitte den Account erneut auswählen."
-          : text);
-      } finally {
-        rewardBusy.current = false;
+        setMessage(String(error));
       }
     };
 
     logo.addEventListener("dblclick", claim);
     return () => logo.removeEventListener("dblclick", claim);
-  }, [activeAccount, snapshot]);
+  }, [activeAccountId]);
 
   const installLauncherUpdate = async () => {
     if (!update) return;

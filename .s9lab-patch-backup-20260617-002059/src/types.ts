@@ -54,7 +54,6 @@ export interface LaunchStatus {
   account_name: string | null;
   started_at_unix: number | null;
   message: string | null;
-  running_instances: number;
 }
 
 export interface LauncherSnapshot {
