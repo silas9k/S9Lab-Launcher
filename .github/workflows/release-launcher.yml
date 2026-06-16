@@ -1,19 +1,40 @@
 name: Release S9Lab Launcher
+
 on:
   push:
-    tags: ["launcher-v*"]
+    tags:
+      - "launcher-v*"
+
 permissions:
   contents: write
+
 jobs:
   release:
     runs-on: windows-latest
+
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+      NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
-      - uses: dtolnay/rust-toolchain@stable
-      - run: npm ci
-      - uses: tauri-apps/tauri-action@v0
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: "npm"
+          registry-url: "https://registry.npmjs.org/"
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend dependencies
+        run: npm ci --registry=https://registry.npmjs.org/
+
+      - name: Build and publish S9Lab Launcher
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
