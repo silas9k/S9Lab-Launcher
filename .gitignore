@@ -1,0 +1,14 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+*.log
+
+# Private Updater-Schlüssel
+s9lab-updater.key
+s9lab-updater.key.pub
+
+# Lokale Backups und temporäre Dateien
+patch-backup-*/
+*.backup-*
+client-update-upload/
