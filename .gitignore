@@ -12,3 +12,6 @@ s9lab-updater.key.pub
 patch-backup-*/
 *.backup-*
 client-update-upload/
+
+s9lab-updater.key
+s9lab-updater-old.key

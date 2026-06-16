@@ -1,6 +1,6 @@
 [package]
 name = "s9lab-launcher"
-version = "1.0.3"
+version = "1.0.4"
 description = "Official S9Lab Minecraft Client Launcher"
 authors = ["S9Lab"]
 edition = "2021"
