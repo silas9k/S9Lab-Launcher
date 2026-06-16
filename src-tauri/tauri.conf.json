@@ -1,74 +1,74 @@
 {
-    "$schema":  "https://schema.tauri.app/config/2",
-    "productName":  "S9Lab Launcher",
-    "version":  "1.0.1",
-    "identifier":  "site.s9lab.launcher",
-    "build":  {
-                  "beforeDevCommand":  "npm run dev",
-                  "devUrl":  "http://127.0.0.1:1420",
-                  "beforeBuildCommand":  "npm run build",
-                  "frontendDist":  "../dist"
-              },
-    "app":  {
-                "windows":  [
-                                {
-                                    "label":  "main",
-                                    "title":  "S9Lab Launcher",
-                                    "width":  1240,
-                                    "height":  790,
-                                    "minWidth":  940,
-                                    "minHeight":  650,
-                                    "resizable":  true,
-                                    "fullscreen":  false,
-                                    "decorations":  false,
-                                    "transparent":  false,
-                                    "center":  true
-                                }
-                            ],
-                "security":  {
-                                 "csp":  "default-src \u0027self\u0027; img-src \u0027self\u0027 asset: data: https://crafatar.com https://mc-heads.net http://31.70.89.55:25614 https://textures.minecraft.net; style-src \u0027self\u0027 \u0027unsafe-inline\u0027 https://fonts.googleapis.com; font-src \u0027self\u0027 https://fonts.gstatic.com; connect-src ipc: http://ipc.localhost https://login.microsoftonline.com https://user.auth.xboxlive.com https://xsts.auth.xboxlive.com https://api.minecraftservices.com https://piston-meta.mojang.com https://piston-data.mojang.com https://launchermeta.mojang.com https://libraries.minecraft.net https://resources.download.minecraft.net https://meta.fabricmc.net https://crafatar.com https://mc-heads.net http://31.70.89.55:25614"
-                             }
-            },
-    "bundle":  {
-                   "active":  true,
-                   "targets":  [
-                                   "msi",
-                                   "nsis"
-                               ],
-                   "publisher":  "S9Lab",
-                   "category":  "Game",
-                   "shortDescription":  "Official S9Lab Minecraft Client Launcher",
-                   "resources":  [
-                                     "resources/default-profile-mods/*"
-                                 ],
-                   "icon":  [
-                                "icons/32x32.png",
-                                "icons/128x128.png",
-                                "icons/128x128@2x.png",
-                                "icons/icon.ico"
-                            ],
-                   "fileAssociations":  [
-                                            {
-                                                "ext":  [
-                                                            "designs9c"
-                                                        ],
-                                                "name":  "S9Lab Design Profile",
-                                                "description":  "S9Lab Launcher Farb- und Designprofil",
-                                                "role":  "Editor",
-                                                "mimeType":  "application/x-s9lab-design"
-                                            }
-                                        ],
-                   "createUpdaterArtifacts":  true
-               },
-    "plugins":  {
-                    "updater":  {
-                                    "pubkey":  "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZFN0MzRkRGMDkwMkY3QzkKUldUSjl3SUozejk4L2x0aTRhTS9kUkFmZmMyakJYY2lKUVFTeWhOaS83MnBGSlZpQmliMW45bGkK",
-                                    "endpoints":  [
-                                                      "https://github.com/silas9k/S9Lab-Launcher/releases/latest/download/latest.json"
-                                                  ],
-                                    "windows":  {
-                                                    "installMode":  "passive"
-                                                }
-                                }
-                }
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "S9Lab Launcher",
+  "version": "1.0.2",
+  "identifier": "site.s9lab.launcher",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "S9Lab Launcher",
+        "width": 1240,
+        "height": 790,
+        "minWidth": 940,
+        "minHeight": 650,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": false,
+        "transparent": false,
+        "center": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: data: https://crafatar.com https://mc-heads.net http://31.70.89.55:25614 https://textures.minecraft.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src ipc: http://ipc.localhost https://login.microsoftonline.com https://user.auth.xboxlive.com https://xsts.auth.xboxlive.com https://api.minecraftservices.com https://piston-meta.mojang.com https://piston-data.mojang.com https://launchermeta.mojang.com https://libraries.minecraft.net https://resources.download.minecraft.net https://meta.fabricmc.net https://crafatar.com https://mc-heads.net http://31.70.89.55:25614"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "msi",
+      "nsis"
+    ],
+    "publisher": "S9Lab",
+    "category": "Game",
+    "shortDescription": "Official S9Lab Minecraft Client Launcher",
+    "resources": [
+      "resources/default-profile-mods/*"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "fileAssociations": [
+      {
+        "ext": [
+          "designs9c"
+        ],
+        "name": "S9Lab Design Profile",
+        "description": "S9Lab Launcher Farb- und Designprofil",
+        "role": "Editor",
+        "mimeType": "application/x-s9lab-design"
+      }
+    ],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEZFN0MzRkRGMDkwMkY3QzkKUldUSjl3SUozejk4L2x0aTRhTS9kUkFmZmMyakJYY2lKUVFTeWhOaS83MnBGSlZpQmliMW45bGkK",
+      "endpoints": [
+        "https://github.com/silas9k/S9Lab-Launcher/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
 }
