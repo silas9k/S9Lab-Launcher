@@ -15,3 +15,9 @@ client-update-upload/
 
 s9lab-updater.key
 s9lab-updater-old.key
+
+s9lab-updater.key
+s9lab-updater.key.pub
+s9lab-updater-broken.key
+s9lab-updater*.key
+s9lab-updater*.key.pub
