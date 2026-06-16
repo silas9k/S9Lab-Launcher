@@ -1,4 +1,6 @@
-$11.0.1"
+[package]
+name = "s9lab-launcher"
+version = "1.0.1"
 description = "Official S9Lab Minecraft Client Launcher"
 authors = ["S9Lab"]
 edition = "2021"
