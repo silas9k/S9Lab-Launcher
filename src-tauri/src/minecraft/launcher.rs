@@ -99,7 +99,7 @@ async fn prepare_and_spawn(app: &AppHandle, state: &AppState, account_id: &str) 
         .timeout(std::time::Duration::from_secs(180))
         .build()?;
     installer::sync_wavey_capes(&mod_client, &game).await?;
-    let runtime = java::resolve_java(settings.java_path.as_deref())?;
+    let runtime = java::ensure_java(settings.java_path.as_deref()).await?;
     let required_java = version.java_version.as_ref().map(|java| java.major_version).unwrap_or(21);
     if runtime.major_version < required_java {
         return Err(AppError::Message(format!("Minecraft benÃ¶tigt Java {required_java}, gefunden wurde Java {}.", runtime.major_version)));

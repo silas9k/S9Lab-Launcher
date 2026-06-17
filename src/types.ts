@@ -15,6 +15,7 @@ export type CornerStyle = "sharp" | "soft" | "round";
 export type SkinPose = "hero" | "relaxed" | "classic";
 
 export interface LauncherSettings {
+  ultimate_installer_mode: boolean;
   game_version: string;
   memory_mb: number;
   java_path: string | null;

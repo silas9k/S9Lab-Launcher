@@ -3,7 +3,8 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-const VERSION_MANIFEST_URL: &str = "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
+const VERSION_MANIFEST_URL: &str =
+    "https://piston-meta.mojang.com/mc/game/version_manifest_v2.json";
 const FABRIC_META_URL: &str = "https://meta.fabricmc.net/v2/versions/loader";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -122,7 +123,10 @@ pub struct Arguments {
 #[serde(untagged)]
 pub enum Argument {
     Plain(String),
-    Conditional { rules: Vec<Rule>, value: ArgumentValue },
+    Conditional {
+        rules: Vec<Rule>,
+        value: ArgumentValue,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -221,30 +225,74 @@ impl FeatureSet {
 }
 
 pub async fn fetch_version(client: &Client, version_id: &str) -> AppResult<VersionJson> {
-    let manifest: VersionManifest = client.get(VERSION_MANIFEST_URL).send().await?.error_for_status()?.json().await?;
-    let entry = manifest.versions.into_iter().find(|entry| entry.id == version_id)
-        .ok_or_else(|| AppError::Message(format!("Minecraft-Version {version_id} wurde im Mojang-Manifest nicht gefunden.")))?;
-    Ok(client.get(entry.url).send().await?.error_for_status()?.json().await?)
+    let manifest: VersionManifest = client
+        .get(VERSION_MANIFEST_URL)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let entry = manifest
+        .versions
+        .into_iter()
+        .find(|entry| entry.id == version_id)
+        .ok_or_else(|| {
+            AppError::Message(format!(
+                "Minecraft-Version {version_id} wurde im Mojang-Manifest nicht gefunden."
+            ))
+        })?;
+    Ok(client
+        .get(entry.url)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?)
 }
 
-pub async fn fetch_fabric_profile(client: &Client, game_version: &str, minimum_loader: &str) -> AppResult<(String, FabricProfile)> {
+pub async fn fetch_fabric_profile(
+    client: &Client,
+    game_version: &str,
+    minimum_loader: &str,
+) -> AppResult<(String, FabricProfile)> {
     let list_url = format!("{FABRIC_META_URL}/{game_version}");
-    let entries: Vec<FabricLoaderEntry> = client.get(list_url).send().await?.error_for_status()?.json().await?;
-    let selected = entries.into_iter()
+    let entries: Vec<FabricLoaderEntry> = client
+        .get(list_url)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
+    let selected = entries
+        .into_iter()
         .filter(|entry| version_at_least(&entry.loader.version, minimum_loader))
         .max_by(|a, b| {
-            a.loader.stable.cmp(&b.loader.stable)
+            a.loader
+                .stable
+                .cmp(&b.loader.stable)
                 .then_with(|| compare_versions(&a.loader.version, &b.loader.version))
         })
-        .ok_or_else(|| AppError::Message(format!("Kein kompatibler Fabric Loader ab Version {minimum_loader} gefunden.")))?;
+        .ok_or_else(|| {
+            AppError::Message(format!(
+                "Kein kompatibler Fabric Loader ab Version {minimum_loader} gefunden."
+            ))
+        })?;
     let loader = selected.loader.version;
     let profile_url = format!("{FABRIC_META_URL}/{game_version}/{loader}/profile/json");
-    let profile: FabricProfile = client.get(profile_url).send().await?.error_for_status()?.json().await?;
+    let profile: FabricProfile = client
+        .get(profile_url)
+        .send()
+        .await?
+        .error_for_status()?
+        .json()
+        .await?;
     Ok((loader, profile))
 }
 
 pub fn rules_allow(rules: &[Rule], features: &FeatureSet) -> bool {
-    if rules.is_empty() { return true; }
+    if rules.is_empty() {
+        return true;
+    }
     let mut allowed = false;
     for rule in rules {
         if rule_matches(rule, features) {
@@ -256,27 +304,54 @@ pub fn rules_allow(rules: &[Rule], features: &FeatureSet) -> bool {
 
 fn rule_matches(rule: &Rule, features: &FeatureSet) -> bool {
     if let Some(os) = &rule.os {
-        if os.name.as_deref().is_some_and(|name| name != current_os_name()) { return false; }
+        if os
+            .name
+            .as_deref()
+            .is_some_and(|name| name != current_os_name())
+        {
+            return false;
+        }
         if let Some(arch) = os.arch.as_deref() {
-            let current = if cfg!(target_pointer_width = "64") { "x86_64" } else { "x86" };
-            if arch != current && !(arch == "x86" && current == "x86_64") { return false; }
+            let current = if cfg!(target_pointer_width = "64") {
+                "x86_64"
+            } else {
+                "x86"
+            };
+            if arch != current && !(arch == "x86" && current == "x86_64") {
+                return false;
+            }
         }
         // Mojang-OS-Versionsregeln sind selten. Ohne zuverlässige native
         // Versionsabfrage wird eine explizite Versionsregel nicht angewendet.
-        if os.version.is_some() { return false; }
+        if os.version.is_some() {
+            return false;
+        }
     }
-    rule.features.iter().all(|(name, expected)| features.values.get(name).copied().unwrap_or(false) == *expected)
+    rule.features
+        .iter()
+        .all(|(name, expected)| features.values.get(name).copied().unwrap_or(false) == *expected)
 }
 
 pub fn current_os_name() -> &'static str {
-    if cfg!(target_os = "windows") { "windows" }
-    else if cfg!(target_os = "macos") { "osx" }
-    else { "linux" }
+    if cfg!(target_os = "windows") {
+        "windows"
+    } else if cfg!(target_os = "macos") {
+        "osx"
+    } else {
+        "linux"
+    }
 }
 
 pub fn native_classifier(library: &Library) -> Option<String> {
     library.natives.get(current_os_name()).map(|value| {
-        value.replace("${arch}", if cfg!(target_pointer_width = "64") { "64" } else { "32" })
+        value.replace(
+            "${arch}",
+            if cfg!(target_pointer_width = "64") {
+                "64"
+            } else {
+                "32"
+            },
+        )
     })
 }
 
@@ -298,19 +373,30 @@ pub fn flatten_arguments(arguments: &[Argument], features: &FeatureSet) -> Vec<S
 pub fn maven_path(coordinate: &str) -> AppResult<String> {
     let parts: Vec<&str> = coordinate.split(':').collect();
     if parts.len() < 3 {
-        return Err(AppError::Message(format!("Ungültige Maven-Koordinate: {coordinate}")));
+        return Err(AppError::Message(format!(
+            "Ungültige Maven-Koordinate: {coordinate}"
+        )));
     }
     let group = parts[0].replace('.', "/");
     let artifact = parts[1];
     let version = parts[2];
-    let classifier = parts.get(3).map(|value| format!("-{value}")).unwrap_or_default();
+    let classifier = parts
+        .get(3)
+        .map(|value| format!("-{value}"))
+        .unwrap_or_default();
     let extension = parts.get(4).copied().unwrap_or("jar");
-    Ok(format!("{group}/{artifact}/{version}/{artifact}-{version}{classifier}.{extension}"))
+    Ok(format!(
+        "{group}/{artifact}/{version}/{artifact}-{version}{classifier}.{extension}"
+    ))
 }
 
 pub fn fabric_download(library: &FabricLibrary) -> AppResult<DownloadInfo> {
     let path = maven_path(&library.name)?;
-    let base = library.url.as_deref().unwrap_or("https://maven.fabricmc.net/").trim_end_matches('/');
+    let base = library
+        .url
+        .as_deref()
+        .unwrap_or("https://maven.fabricmc.net/")
+        .trim_end_matches('/');
     Ok(DownloadInfo {
         sha1: library.sha1.clone(),
         size: library.size,
@@ -325,7 +411,8 @@ fn version_at_least(version: &str, minimum: &str) -> bool {
 
 fn compare_versions(a: &str, b: &str) -> std::cmp::Ordering {
     let parse = |value: &str| -> Vec<u64> {
-        value.split(|character: char| !character.is_ascii_digit())
+        value
+            .split(|character: char| !character.is_ascii_digit())
             .filter(|part| !part.is_empty())
             .map(|part| part.parse::<u64>().unwrap_or(0))
             .collect()
@@ -351,6 +438,9 @@ mod tests {
 
     #[test]
     fn creates_maven_paths() {
-        assert_eq!(maven_path("net.fabricmc:fabric-loader:0.19.3").unwrap(), "net/fabricmc/fabric-loader/0.19.3/fabric-loader-0.19.3.jar");
+        assert_eq!(
+            maven_path("net.fabricmc:fabric-loader:0.19.3").unwrap(),
+            "net/fabricmc/fabric-loader/0.19.3/fabric-loader-0.19.3.jar"
+        );
     }
 }

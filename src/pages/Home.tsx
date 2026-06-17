@@ -1,3 +1,4 @@
+import JavaProgressBar from "../components/JavaProgressBar";
 import { Download, Play, Plus, Square } from "lucide-react";
 import { activeAccount, useLauncherStore } from "../store/launcherStore";
 
@@ -9,7 +10,7 @@ export function HomePage() {
   const canStart = Boolean(account) && snapshot.client.java_found;
 
   return (
-    <div className="launcher-home launcher-home--minimal">
+    <div className={`launcher-home launcher-home--minimal ${snapshot.settings?.ultimate_installer_mode && busy ? "blurred" : ""}`}>
       <section className="minimal-stage">
         <div className="wave wave--one" /><div className="wave wave--two" />
         <div className="minimal-launch">
@@ -21,9 +22,15 @@ export function HomePage() {
           {running && <button className="stage-hint" onClick={() => void launch()} disabled={busy || !canStart}><Plus size={15}/> Weitere Instanz starten</button>}
           {!account && <button className="stage-hint" onClick={() => setPage("accounts")}>Microsoft-Account hinzufügen</button>}
           {!snapshot.client.java_found && <button className="stage-hint stage-hint--java" onClick={() => setPage("settings")}>Java 21 konfigurieren</button>}
-          {installProgress && busy && <div className="stage-progress"><span>{installProgress.stage}</span><b>{Math.round(installProgress.percent)}%</b><i><em style={{ width: `${installProgress.percent}%` }} /></i><small>{installProgress.detail}</small></div>}
-        </div>
+          {installProgress && busy && <div className="stage-progress"><span>{installProgress.stage}</span><b>{Math.round(installProgress.percent)}%</b><i><em style={{ width: `${installProgress.percent}%` }} /></i><small>{installProgress.detail}</small>  
+</div>}
+          
+</div>
       </section>
-    </div>
+      
+</div>
   );
 }
+
+
+

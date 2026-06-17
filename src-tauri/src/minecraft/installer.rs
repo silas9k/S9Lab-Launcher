@@ -111,6 +111,9 @@ pub async fn install_client(app: AppHandle, repair: bool) -> AppResult<ClientSta
     let settings = config::load_settings()?;
     let game = paths::game_paths(&settings.game_directory)?;
     let client = http_client()?;
+    emit_progress(&app, "Java", "Java-21-Laufzeit wird geprüft", 0, 9, 1.0);
+    let runtime = java::ensure_java(settings.java_path.as_deref()).await?;
+    logging::append(&format!("Java-Runtime bereit: Java {} unter {}", runtime.major_version, runtime.path))?;
     logging::append(&format!("Installation gestartet: Minecraft {}, repair={repair}", settings.game_version))?;
 
     emit_progress(&app, "Vorbereitung", "Spielordner und Client-Mods", 0, 8, 1.0);

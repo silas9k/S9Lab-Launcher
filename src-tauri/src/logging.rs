@@ -1,6 +1,9 @@
 use crate::{app::paths, error::AppResult};
 use chrono::Local;
-use std::{fs::{self, OpenOptions}, io::Write};
+use std::{
+    fs::{self, OpenOptions},
+    io::Write,
+};
 
 pub fn append(message: &str) -> AppResult<()> {
     let path = paths::launcher_paths()?.log_file;
@@ -10,7 +13,12 @@ pub fn append(message: &str) -> AppResult<()> {
         fs::rename(&path, rotated)?;
     }
     let mut file = OpenOptions::new().create(true).append(true).open(path)?;
-    writeln!(file, "[{}] {}", Local::now().format("%Y-%m-%d %H:%M:%S"), message)?;
+    writeln!(
+        file,
+        "[{}] {}",
+        Local::now().format("%Y-%m-%d %H:%M:%S"),
+        message
+    )?;
     Ok(())
 }
 
@@ -22,5 +30,8 @@ pub fn read_last(limit: usize) -> AppResult<Vec<String>> {
     let raw = fs::read_to_string(path)?;
     let lines: Vec<&str> = raw.lines().collect();
     let start = lines.len().saturating_sub(limit.min(2_000));
-    Ok(lines[start..].iter().map(|line| (*line).to_string()).collect())
+    Ok(lines[start..]
+        .iter()
+        .map(|line| (*line).to_string())
+        .collect())
 }

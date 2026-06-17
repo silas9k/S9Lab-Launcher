@@ -17,7 +17,10 @@ impl DiscordRpcConfig {
     fn is_ready(&self) -> bool {
         self.enabled
             && self.client_id.len() >= 17
-            && self.client_id.chars().all(|character| character.is_ascii_digit())
+            && self
+                .client_id
+                .chars()
+                .all(|character| character.is_ascii_digit())
     }
 }
 

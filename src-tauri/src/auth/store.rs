@@ -55,8 +55,14 @@ fn load_index() -> AppResult<AccountIndex> {
         return Ok(AccountIndex::default());
     }
     let mut index: AccountIndex = serde_json::from_str(&fs::read_to_string(path)?)?;
-    index.accounts.sort_by_key(|account| std::cmp::Reverse(account.last_used_at_unix));
-    if index.active_account_id.as_ref().is_some_and(|id| !index.accounts.iter().any(|account| &account.id == id)) {
+    index
+        .accounts
+        .sort_by_key(|account| std::cmp::Reverse(account.last_used_at_unix));
+    if index
+        .active_account_id
+        .as_ref()
+        .is_some_and(|id| !index.accounts.iter().any(|account| &account.id == id))
+    {
         index.active_account_id = index.accounts.first().map(|account| account.id.clone());
     }
     Ok(index)
@@ -68,7 +74,10 @@ fn save_index(index: &AccountIndex) -> AppResult<()> {
 }
 
 fn entry(account_id: &str, field: &str) -> AppResult<keyring::Entry> {
-    Ok(keyring::Entry::new(SERVICE, &format!("{account_id}:{field}"))?)
+    Ok(keyring::Entry::new(
+        SERVICE,
+        &format!("{account_id}:{field}"),
+    )?)
 }
 
 fn set_secret(account_id: &str, field: &str, value: &str) -> AppResult<()> {
@@ -103,13 +112,17 @@ pub fn active_account_id() -> AppResult<Option<String>> {
 
 pub fn select_account(account_id: &str) -> AppResult<Account> {
     let mut index = load_index()?;
-    let account = index.accounts.iter_mut()
+    let account = index
+        .accounts
+        .iter_mut()
         .find(|account| account.id == account_id)
         .ok_or_else(|| AppError::AccountNotFound(account_id.to_string()))?;
     account.last_used_at_unix = Utc::now().timestamp();
     let selected = account.clone();
     index.active_account_id = Some(account_id.to_string());
-    index.accounts.sort_by_key(|item| std::cmp::Reverse(item.last_used_at_unix));
+    index
+        .accounts
+        .sort_by_key(|item| std::cmp::Reverse(item.last_used_at_unix));
     save_index(&index)?;
     Ok(selected)
 }
@@ -124,14 +137,18 @@ pub fn upsert_account(mut account: Account, session: &AccountSession) -> AppResu
         index.accounts.push(account.clone());
     }
     index.active_account_id = Some(account.id.clone());
-    index.accounts.sort_by_key(|item| std::cmp::Reverse(item.last_used_at_unix));
+    index
+        .accounts
+        .sort_by_key(|item| std::cmp::Reverse(item.last_used_at_unix));
     save_index(&index)?;
     Ok(account)
 }
 
 pub fn update_account_name(account_id: &str, username: &str) -> AppResult<()> {
     let mut index = load_index()?;
-    let account = index.accounts.iter_mut()
+    let account = index
+        .accounts
+        .iter_mut()
         .find(|account| account.id == account_id)
         .ok_or_else(|| AppError::AccountNotFound(account_id.to_string()))?;
     account.username = username.to_string();
@@ -160,18 +177,28 @@ pub fn save_session(account_id: &str, session: &AccountSession) -> AppResult<()>
         set_secret(account_id, FIELD_REFRESH, refresh)?;
     }
     set_secret(account_id, FIELD_MINECRAFT, &session.minecraft_access_token)?;
-    set_secret(account_id, FIELD_META, &serde_json::to_string(&SessionMeta {
-        minecraft_expires_at_unix: session.minecraft_expires_at_unix,
-        xuid: session.xuid.clone(),
-    })?)?;
+    set_secret(
+        account_id,
+        FIELD_META,
+        &serde_json::to_string(&SessionMeta {
+            minecraft_expires_at_unix: session.minecraft_expires_at_unix,
+            xuid: session.xuid.clone(),
+        })?,
+    )?;
     Ok(())
 }
 
 pub fn load_session(account_id: &str) -> AppResult<AccountSession> {
-    let minecraft_access_token = get_secret(account_id, FIELD_MINECRAFT)?
-        .ok_or_else(|| AppError::Message("Gespeicherte Minecraft-Sitzung fehlt. Bitte Account erneut anmelden.".into()))?;
-    let meta_raw = get_secret(account_id, FIELD_META)?
-        .ok_or_else(|| AppError::Message("Gespeicherte Sitzungsdaten fehlen. Bitte Account erneut anmelden.".into()))?;
+    let minecraft_access_token = get_secret(account_id, FIELD_MINECRAFT)?.ok_or_else(|| {
+        AppError::Message(
+            "Gespeicherte Minecraft-Sitzung fehlt. Bitte Account erneut anmelden.".into(),
+        )
+    })?;
+    let meta_raw = get_secret(account_id, FIELD_META)?.ok_or_else(|| {
+        AppError::Message(
+            "Gespeicherte Sitzungsdaten fehlen. Bitte Account erneut anmelden.".into(),
+        )
+    })?;
     let meta: SessionMeta = serde_json::from_str(&meta_raw)?;
     Ok(AccountSession {
         microsoft_refresh_token: get_secret(account_id, FIELD_REFRESH)?,
@@ -213,7 +240,9 @@ fn migrate_legacy_if_needed() -> AppResult<()> {
     };
     let _ = upsert_account(account, &session)?;
     let _ = legacy_entry.delete_credential();
-    logging::append("Alter Launcher-Account wurde in die neue Mehrfach-Account-Verwaltung übernommen")?;
+    logging::append(
+        "Alter Launcher-Account wurde in die neue Mehrfach-Account-Verwaltung übernommen",
+    )?;
     Ok(())
 }
 

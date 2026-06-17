@@ -1,8 +1,18 @@
 use crate::{
-    app::{config::{self, LauncherSettings}, state::AppState},
-    auth::{microsoft::{self, MicrosoftDeviceCode}, model::Account, store},
+    app::{
+        config::{self, LauncherSettings},
+        state::AppState,
+    },
+    auth::{
+        microsoft::{self, MicrosoftDeviceCode},
+        model::Account,
+        store,
+    },
     logging,
-    minecraft::{installer::{self, ClientStatus}, launcher::{self, LaunchStatus}},
+    minecraft::{
+        installer::{self, ClientStatus},
+        launcher::{self, LaunchStatus},
+    },
 };
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::{Deserialize, Serialize};
@@ -39,7 +49,9 @@ struct TextureEntry {
     url: String,
 }
 
-fn err(error: impl std::fmt::Display) -> String { error.to_string() }
+fn err(error: impl std::fmt::Display) -> String {
+    error.to_string()
+}
 
 #[derive(Debug, Serialize)]
 pub struct PendingDesignImport {
@@ -50,15 +62,33 @@ pub struct PendingDesignImport {
 
 #[tauri::command]
 pub fn pending_design_import() -> Result<Option<PendingDesignImport>, String> {
-    let candidate = std::env::args_os().skip(1).map(std::path::PathBuf::from).find(|path| {
-        path.extension().and_then(|value| value.to_str()).map(|value| value.eq_ignore_ascii_case("designs9c")).unwrap_or(false)
-    });
-    let Some(path) = candidate else { return Ok(None); };
+    let candidate = std::env::args_os()
+        .skip(1)
+        .map(std::path::PathBuf::from)
+        .find(|path| {
+            path.extension()
+                .and_then(|value| value.to_str())
+                .map(|value| value.eq_ignore_ascii_case("designs9c"))
+                .unwrap_or(false)
+        });
+    let Some(path) = candidate else {
+        return Ok(None);
+    };
     let metadata = std::fs::metadata(&path).map_err(err)?;
-    if !metadata.is_file() || metadata.len() > 65_536 { return Err("invalid_design_file".to_string()); }
+    if !metadata.is_file() || metadata.len() > 65_536 {
+        return Err("invalid_design_file".to_string());
+    }
     let content = std::fs::read_to_string(&path).map_err(err)?;
-    let file_name = path.file_name().and_then(|value| value.to_str()).unwrap_or("S9Lab.designs9c").to_string();
-    Ok(Some(PendingDesignImport { path: path.to_string_lossy().to_string(), file_name, content }))
+    let file_name = path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("S9Lab.designs9c")
+        .to_string();
+    Ok(Some(PendingDesignImport {
+        path: path.to_string_lossy().to_string(),
+        file_name,
+        content,
+    }))
 }
 
 fn is_png(bytes: &[u8]) -> bool {
@@ -82,8 +112,14 @@ pub async fn start_microsoft_login() -> Result<MicrosoftDeviceCode, String> {
 }
 
 #[tauri::command]
-pub async fn complete_microsoft_login(device_code: String, interval: u64, expires_in: u64) -> Result<Account, String> {
-    microsoft::complete_login(&device_code, interval, expires_in).await.map_err(err)
+pub async fn complete_microsoft_login(
+    device_code: String,
+    interval: u64,
+    expires_in: u64,
+) -> Result<Account, String> {
+    microsoft::complete_login(&device_code, interval, expires_in)
+        .await
+        .map_err(err)
 }
 
 #[tauri::command]
@@ -112,13 +148,24 @@ pub async fn install_client(app: AppHandle, repair: bool) -> Result<ClientStatus
 }
 
 #[tauri::command]
-pub async fn launch_client(app: AppHandle, state: State<'_, AppState>, account_id: String) -> Result<LaunchStatus, String> {
-    launcher::launch_client(app, state.inner().clone(), &account_id).await.map_err(err)
+pub async fn launch_client(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    account_id: String,
+) -> Result<LaunchStatus, String> {
+    launcher::launch_client(app, state.inner().clone(), &account_id)
+        .await
+        .map_err(err)
 }
 
 #[tauri::command]
-pub async fn stop_client(app: AppHandle, state: State<'_, AppState>) -> Result<LaunchStatus, String> {
-    launcher::stop_client(&app, state.inner()).await.map_err(err)
+pub async fn stop_client(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<LaunchStatus, String> {
+    launcher::stop_client(&app, state.inner())
+        .await
+        .map_err(err)
 }
 
 #[tauri::command]
@@ -152,8 +199,15 @@ struct AuthenticatedSkin {
 
 #[tauri::command]
 pub async fn fetch_player_skin(account_id: String, username: String) -> Result<String, String> {
-    let compact_uuid: String = account_id.chars().filter(|character| *character != '-').collect();
-    if compact_uuid.len() != 32 || !compact_uuid.chars().all(|character| character.is_ascii_hexdigit()) {
+    let compact_uuid: String = account_id
+        .chars()
+        .filter(|character| *character != '-')
+        .collect();
+    if compact_uuid.len() != 32
+        || !compact_uuid
+            .chars()
+            .all(|character| character.is_ascii_hexdigit())
+    {
         return Err("invalid_account_uuid".to_string());
     }
 
@@ -176,15 +230,24 @@ pub async fn fetch_player_skin(account_id: String, username: String) -> Result<S
         if let Ok(response) = response {
             if response.status().is_success() {
                 if let Ok(profile) = response.json::<AuthenticatedMinecraftProfile>().await {
-                    let selected = profile.skins.iter()
+                    let selected = profile
+                        .skins
+                        .iter()
                         .find(|skin| skin.state.as_deref() == Some("ACTIVE"))
                         .or_else(|| profile.skins.first());
                     if let Some(skin) = selected {
-                        if let Ok(texture_response) = client.get(skin.url.replace("http://", "https://")).send().await {
+                        if let Ok(texture_response) = client
+                            .get(skin.url.replace("http://", "https://"))
+                            .send()
+                            .await
+                        {
                             if texture_response.status().is_success() {
                                 let bytes = texture_response.bytes().await.map_err(err)?;
                                 if is_png(&bytes) {
-                                    return Ok(format!("data:image/png;base64,{}", STANDARD.encode(&bytes)));
+                                    return Ok(format!(
+                                        "data:image/png;base64,{}",
+                                        STANDARD.encode(&bytes)
+                                    ));
                                 }
                             }
                         }
@@ -196,19 +259,31 @@ pub async fn fetch_player_skin(account_id: String, username: String) -> Result<S
     }
 
     // Public Mojang session server fallback by the exact Minecraft profile UUID.
-    let profile_url = format!("https://sessionserver.mojang.com/session/minecraft/profile/{compact_uuid}");
+    let profile_url =
+        format!("https://sessionserver.mojang.com/session/minecraft/profile/{compact_uuid}");
     if let Ok(response) = client.get(profile_url).send().await {
         if response.status().is_success() {
             if let Ok(profile) = response.json::<MojangProfile>().await {
-                if let Some(property) = profile.properties.into_iter().find(|property| property.name == "textures") {
+                if let Some(property) = profile
+                    .properties
+                    .into_iter()
+                    .find(|property| property.name == "textures")
+                {
                     if let Ok(decoded) = STANDARD.decode(property.value) {
                         if let Ok(payload) = serde_json::from_slice::<TexturePayload>(&decoded) {
                             if let Some(texture) = payload.textures.get("SKIN") {
-                                if let Ok(texture_response) = client.get(texture.url.replace("http://", "https://")).send().await {
+                                if let Ok(texture_response) = client
+                                    .get(texture.url.replace("http://", "https://"))
+                                    .send()
+                                    .await
+                                {
                                     if texture_response.status().is_success() {
                                         let bytes = texture_response.bytes().await.map_err(err)?;
                                         if is_png(&bytes) {
-                                            return Ok(format!("data:image/png;base64,{}", STANDARD.encode(&bytes)));
+                                            return Ok(format!(
+                                                "data:image/png;base64,{}",
+                                                STANDARD.encode(&bytes)
+                                            ));
                                         }
                                     }
                                 }

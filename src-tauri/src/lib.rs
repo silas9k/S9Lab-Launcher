@@ -1,9 +1,9 @@
 mod app;
 mod auth;
 mod commands;
+mod discord_rpc;
 mod error;
 mod logging;
-mod discord_rpc;
 mod minecraft;
 mod rewards;
 use app::state::AppState;
@@ -46,7 +46,3 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("S9Lab Launcher konnte nicht gestartet werden");
 }
-
-
-
-

@@ -24,7 +24,9 @@ pub struct GamePaths {
 pub fn launcher_paths() -> AppResult<LauncherPaths> {
     let data = dirs::data_dir()
         .or_else(dirs::data_local_dir)
-        .ok_or_else(|| AppError::Message("Windows-AppData konnte nicht ermittelt werden.".into()))?;
+        .ok_or_else(|| {
+            AppError::Message("Windows-AppData konnte nicht ermittelt werden.".into())
+        })?;
     let root = data.join("S9Lab Launcher");
     fs::create_dir_all(&root)?;
     Ok(LauncherPaths {
